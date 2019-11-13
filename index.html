@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Whiteboard</title>
+    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet"> 
+    <script>
+        if(!location.hash.replace('#', '').length) {
+            location.href = location.href.split('#')[0] + '#' + (Math.random() * 100).toString().replace('.', '');
+            location.reload();
+        }
+        
+    </script>
+
+    
+    <!-- scripts used for screen-sharing -->
+    <script src="https://www.webrtc-experiment.com/socket.io.js"> </script>
+    <script src="https://www.webrtc-experiment.com/DetectRTC.js"></script>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script src="https://www.webrtc-experiment.com/CodecsHandler.js"></script>
+    <script src="https://www.webrtc-experiment.com/BandwidthHandler.js"></script>
+    <script src="https://www.webrtc-experiment.com/IceServersHandler.js"></script>
+    <script src="https://www.webrtc-experiment.com/Pluginfree-Screen-Sharing/conference.js"></script>
+</head>
+
+<style>
+    /* width */
+::-webkit-scrollbar {
+  width: 10px;
+  border-radius: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+  border-radius: 10px;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555; 
+}
+video {
+    -moz-transition: all 1s ease;
+    -ms-transition: all 1s ease;
+
+    -o-transition: all 1s ease;
+    -webkit-transition: all 1s ease;
+    transition: all 1s ease;
+    vertical-align: top;
+    width: 100%;
+}
+</style>
+
+<body class="bg-secondary p-5 bg-gray-100">
+    <h1 class="text-6xl">Whiteboard</h1>
+    <div class="container">
+        <div class="flex w-3/4">
+            <div class="flex-1">
+                <div class="max-w-sm rounded overflow-hidden shadow-lg text-gray-700 text-center bg-gray-100 my-5 ">
+                    <h2 class="text-2xl">Today's Content</h2>
+                <div id="app">
+                    <input type="text" name="entry" v-model="newEntry" v-on:keyup.enter="addEntry" class="bg-white focus:outline-none focus:shadow-none border border-gray-300 rounded-lg py-2 px-4 block w-full appearance-none leading-normal">
+                    <p>
+                        Unfinished: {{unfinishedEntries.length}} 
+                    </p>
+                    <div class="items">
+                        <div class='item' v-for="(entry, index) in todos" v-bind:class="{done: entry.isDone}">
+                            <input type="checkbox" name="isDone" v-model="entry.isDone" class="float-left mx-4 mt-2">
+                            {{entry.value}}
+                            <a class="font-bold cursor-pointer float-right mx-4" v-on:click="removeEntry(index)">&cross;</a>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                <div class="max-w-sm rounded overflow-hidden shadow-none text-gray-700 text-center bg-gray-100 ">
+                    <form class="flex">
+                        <select class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" id="busstopcode">
+                            <option value="12101" selected>Ngee Ann</option>
+                            <option value="12109">Opp Ngee Ann</option>
+                            <option value="42091">Beauty World</option>
+                        </select>
+                        <div id="button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded cursor-pointer">Check</div>
+                    </form> 
+                    <p id="result" class="text-xs"></p>
+                    <div id="viz"></div>
+                </div>
+            </div>
+            
+            <div class="max-w-sm rounded overflow-hidden shadow-none text-gray-700 text-center bg-gray-100 flex-1">
+                <section class="experiment">
+                    <section class="" style="text-align: center;">                    
+                        <input type="text" id="room-name" placeholder="Enter " style="width: 80%; text-align: center; display: none;">
+                        <button id="share-screen" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded cursor-pointer mb-5">Share Your Screen</button>
+                    </section>
+
+                    <!-- local/remote videos container -->
+                    <div id="videos-container"></div>
+
+                    <section id="unique-token" style="display: none; text-align: center; padding: 20px;"></section>
+                </section>
+            </div>
+            
+        </div>
+        <div class="sm:block xl:absolute xl:top-0 xl:right-0 xl:m-12 xl:w-3/12 " id="chat" >
+            <div v-if="ready">
+                <p v-for="user in info">
+                    {{user.username}} {{user.type}}
+                </p>
+            </div>
+            <div v-if="!ready">
+                <h4>Poke your 'cher</h4>
+                <form @submit.prevent="addUser">
+                    <div class="form-group row">
+                        <input type="text" class="bg-white focus:outline-none focus:shadow-none border border-gray-300 rounded-lg py-2 px-4 block w-full appearance-none leading-normal" v-model="username"
+                            placeholder="Enter Name here...">
+                        <input type="submit" value="Join" class="bg-white focus:outline-none focus:shadow-none border border-gray-300 rounded-lg py-2 px-4 block w-full appearance-none leading-normal">
+
+                    </div>
+                </form>
+            </div>
+            <div class="max-w-sm rounded overflow-hidden shadow-lg bg-info " v-if="ready">
+                <div class="text-3xl text-center m-5">
+                    <h4>Full Stack Development</h4>
+                </div>
+                <ul style="height: 64vh; overflow-y: scroll">
+                    <small v-if="typing" class="text-white">{{typing}} is typing</small>
+                    <li :class="message.type === 1 ? 'text-left text-sm border border-gray-300 rounded-lg m-3 p-3' : 'text-right text-sm border border-gray-300 rounded-lg m-3 p-3'" v-for="message in messages">
+                        <p>{{message.message}}</p>
+                        <small class="text-xs text-gray-500">{{message.user}}</small>
+                    </li>
+                </ul>
+
+                <div class="card-body">
+                    <form @submit.prevent="send">
+                        <div class="form-group">
+                            <input type="text" class="bg-white focus:outline-none focus:shadow-none border border-gray-300 rounded-lg py-2 px-4 block w-full appearance-none leading-normal" v-model="newMessage"
+                                placeholder="Enter message here">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<script>
+    function create_graph() {
+        var request = new XMLHttpRequest();
+        var bscSelect = document.getElementById("busstopcode");
+        var bsc = bscSelect.options[bscSelect.selectedIndex].value;
+        var url  = `https://cors-anywhere.herokuapp.com/http://datamall2.mytransport.sg/ltaodataservice/BusArrivalv2?BusStopCode=${bsc}`;
+        request.open('GET', url, true)
+        request.setRequestHeader("AccountKey","E0TgsoIrRUyM4PsBmJh9zg==");
+        request.setRequestHeader("accept","application/json");
+        let obj;
+        let sumtotal = 0;
+
+        request.onload = function () {
+            let res = JSON.parse(this.response);
+            let tojsobj = '[';
+            let toprint = "";
+            if (res.Services != null) {
+                res.Services.forEach(function(s){
+                    time1 = timeparser(s.NextBus.EstimatedArrival);
+                    time2 = timeparser(s.NextBus2.EstimatedArrival);
+                    time3 = timeparser(s.NextBus3.EstimatedArrival);
+                    diff1 = time2 - time1;
+                    diff2 = time3 - time2;
+                    avgtime = (parseInt(diff1) + parseInt(diff2)) / 2
+                    tojsobj += `{ "service" : "${s.ServiceNo}", "avgtime" : "${millisToMinutesAndSeconds(avgtime)}" },`;
+                    toprint += `${s.ServiceNo} : ${millisToMinutesAndSeconds(avgtime)} | `;
+                    if (millisToMinutesAndSeconds(avgtime) !== "No service") {
+                        sumtotal += avgtime;
+                    }
+                })
+            }
+
+            var mjsobj = tojsobj.slice(0, tojsobj.length-1);
+            mjsobj += ']';
+            console.log(mjsobj);
+            obj = JSON.parse(mjsobj);
+            totalavgtime = sumtotal / obj.length;
+            document.getElementById("result").innerHTML = toprint + " avg : " +  millisToMinutesAndSeconds(totalavgtime);
+            graphify(obj);  
+        }
+        // Send request
+        request.send()   
+    }
+
+document.getElementById("button").addEventListener("click", create_graph, false);
+
+
+function timeparser(str) {
+    // 2019-07-17T12:05:10+08:00
+    var year = str.slice(0, 4);
+    var month = str.slice(5, 7);
+    var day = str.slice(8, 10);
+    var hour = str.slice(11, 13);
+    var minutes = str.slice(14, 16);
+    var seconds = str.slice(17, 19);
+
+    return new Date(year, month, day, hour, minutes, seconds);
+}
+
+function millisToMinutesAndSeconds(millis) {
+  var minutes = Math.floor(millis / 60000);
+  var seconds = ((millis % 60000) / 1000).toFixed(0);
+
+  if (minutes < 0) { 
+    return "No service"
+  }
+  return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
+}
+
+function graphify(obj) {
+    var margin = {top: 30, right: 30, bottom: 70, left: 60},
+    width = 400 - margin.left - margin.right,
+    height = 360 - margin.top - margin.bottom;
+    refreshGraphy();
+
+    // append the svg object to the body of the page
+    var svg = d3.select("#viz")
+      .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform",
+              "translate(" + margin.left + "," + margin.top + ")");
+
+    // Parse the Data
+
+    function refreshGraphy() {
+        d3.select("svg").remove(); 
+    }
+
+    function drawgraphy(data) {
+    // X axis
+    var x = d3.scaleBand()
+      .range([ 0, width ])
+      .domain(data.map(function(d) { return d.service; }))
+      .padding(0.2);
+    svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+        .attr("transform", "translate(-10,0)rotate(-45)")
+        .style("text-anchor", "end");
+
+    // Add Y axis
+    var y = d3.scaleLinear()
+      .domain([0, 20])
+      .range([ height, 0]);
+    svg.append("g")
+      .call(d3.axisLeft(y));
+
+    // Bars
+    svg.selectAll("mybar")
+      .data(data)
+      .enter()
+      .append("rect")
+        .attr("x", function(d) { return x(d.service); })
+        .attr("y", function(d) { return y(parseFloat(d.avgtime)); })
+        .attr("width", x.bandwidth())
+        .attr("height", function(d) { return height - y(parseFloat(d.avgtime)); })
+        .attr("fill", "#69b3a2")        // no bar at the beginning thus:
+        .attr("height", function(d) { return height - y(0); }) // always equal to 0
+        .attr("y", function(d) { return y(0); })
+
+    // Animation
+    svg.selectAll("rect")
+      .transition()
+      .duration(800)
+      .attr("y", function(d) { return y(parseFloat(d.avgtime)); })
+      .attr("height", function(d) { return height - y(parseFloat(d.avgtime)); })
+      .delay(function(d,i){console.log(i) ; return(i*100)})
+
+
+    }
+    drawgraphy(obj);
+}
+</script>
+<script>
+
+    var config = {
+        openSocket: function(config) {
+            var SIGNALING_SERVER = 'https://socketio-over-nodejs2.herokuapp.com:443/';
+
+            config.channel = config.channel || location.href.replace(/\/|:|#|%|\.|\[|\]/g, '');
+            var sender = Math.round(Math.random() * 999999999) + 999999999;
+
+            io.connect(SIGNALING_SERVER).emit('new-channel', {
+                channel: config.channel,
+                sender: sender
+            });
+
+            var socket = io.connect(SIGNALING_SERVER + config.channel);
+            socket.channel = config.channel;
+            socket.on('connect', function () {
+                if (config.callback) config.callback(socket);
+            });
+
+            socket.send = function (message) {
+                socket.emit('message', {
+                    sender: sender,
+                    data: message
+                });
+            };
+
+            socket.on('message', config.onmessage);
+        },
+        onRemoteStream: function(media) {
+            if(isbroadcaster) return;
+
+            var video = media.video;
+            videosContainer.insertBefore(video, videosContainer.firstChild);
+            
+
+            document.querySelector('.hide-after-join').style.display = 'none';
+        },
+        onRoomFound: function(room) {
+            if(isbroadcaster) return;
+
+            conferenceUI.joinRoom({
+                roomToken: room.roomToken,
+                joinUser: room.broadcaster
+            });
+
+            document.querySelector('.hide-after-join').innerHTML = '<img src="https://www.webrtc-experiment.com/images/key-press.gif" style="margint-top:10px; width:50%;" />';
+        },
+        onNewParticipant: function(numberOfParticipants) {
+            var text = numberOfParticipants + ' users are viewing your screen!';
+            
+            if(numberOfParticipants <= 0) {
+                text = 'No one is viewing your screen YET.';
+            }
+            else if(numberOfParticipants == 1) {
+                text = 'Only one user is viewing your screen!';
+            }
+
+            document.title = text;
+            showErrorMessage(document.title, 'green');
+        },
+        oniceconnectionstatechange: function(state) {
+            var text = '';
+
+            if(state == 'closed' || state == 'disconnected') {
+                text = 'One of the participants just left.';
+                document.title = text;
+                showErrorMessage(document.title);
+            }
+
+            if(state == 'failed') {
+                text = 'Failed to bypass Firewall rules. It seems that target user did not receive your screen. Please ask him reload the page and try again.';
+                document.title = text;
+                showErrorMessage(document.title);
+            }
+
+            if(state == 'connected' || state == 'completed') {
+                text = 'A user successfully received your screen.';
+                document.title = text;
+                showErrorMessage(document.title, 'green');
+            }
+
+            if(state == 'new' || state == 'checking') {
+                text = 'Someone is trying to join you.';
+                document.title = text;
+                showErrorMessage(document.title, 'green');
+            }
+        }
+    };
+
+    function showErrorMessage(error, color) {
+        var errorMessage = document.querySelector('#logs-message');
+        errorMessage.style.color = color || 'red';
+        errorMessage.innerHTML = error;
+        errorMessage.style.display = 'block';
+    }
+
+    function getDisplayMediaError(error) {
+        if (location.protocol === 'http:') {
+            showErrorMessage('Please test this WebRTC experiment on HTTPS.');
+        } else {
+            showErrorMessage(error.toString());
+        }
+    }
+
+    function captureUserMedia(callback) {
+        var video = document.createElement('video');
+        video.muted = true;
+        video.volume = 0;
+        try {
+            video.setAttributeNode(document.createAttribute('autoplay'));
+            video.setAttributeNode(document.createAttribute('playsinline'));
+            video.setAttributeNode(document.createAttribute('controls'));
+        } catch (e) {
+            video.setAttribute('autoplay', true);
+            video.setAttribute('playsinline', true);
+            video.setAttribute('controls', true);
+        }
+
+        if(navigator.getDisplayMedia || navigator.mediaDevices.getDisplayMedia) {
+            function onGettingSteam(stream) {
+                video.srcObject = stream;
+                videosContainer.insertBefore(video, videosContainer.firstChild);
+
+                addStreamStopListener(stream, function() {
+                    location.reload();
+                });
+
+                config.attachStream = stream;
+                callback && callback();
+                
+
+                addStreamStopListener(stream, function() {
+                    location.reload();
+                });
+
+                showPrivateLink();
+
+                document.querySelector('.hide-after-join').style.display = 'none';
+            }
+
+            if(navigator.mediaDevices.getDisplayMedia) {
+                navigator.mediaDevices.getDisplayMedia({video: true}).then(stream => {
+                    onGettingSteam(stream);
+                }, getDisplayMediaError).catch(getDisplayMediaError);
+            }
+            else if(navigator.getDisplayMedia) {
+                navigator.getDisplayMedia({video: true}).then(stream => {
+                    onGettingSteam(stream);
+                }, getDisplayMediaError).catch(getDisplayMediaError);
+            }
+        }
+        else {
+            if (DetectRTC.browser.name === 'Chrome') {
+                if (DetectRTC.browser.version == 71) {
+                    showErrorMessage('Please enable "Experimental WebPlatform" flag via chrome://flags.');
+                } else if (DetectRTC.browser.version < 71) {
+                    showErrorMessage('Please upgrade your Chrome browser.');
+                } else {
+                    showErrorMessage('Please make sure that you are not using Chrome on iOS.');
+                }
+            }
+
+            if (DetectRTC.browser.name === 'Firefox') {
+                showErrorMessage('Please upgrade your Firefox browser.');
+            }
+
+            if (DetectRTC.browser.name === 'Edge') {
+                showErrorMessage('Please upgrade your Edge browser.');
+            }
+
+            if (DetectRTC.browser.name === 'Safari') {
+                showErrorMessage('Safari does NOT supports getDisplayMedia API yet.');
+            }
+        }
+    }
+
+    /* on page load: get public rooms */
+    var conferenceUI = conference(config);
+
+    /* UI specific */
+    var videosContainer = document.getElementById("videos-container") || document.body;
+
+    document.getElementById('share-screen').onclick = function() {
+        var roomName = document.getElementById('room-name') || { };
+        roomName.disabled = true;
+        captureUserMedia(function() {
+            conferenceUI.createRoom({
+                roomName: (roomName.value || 'Anonymous') + ' shared his screen with you'
+            });
+        });
+        this.disabled = true;
+    };
+
+    function showPrivateLink() {
+        var uniqueToken = document.getElementById('unique-token');
+        uniqueToken.innerHTML = '<a href="' + location.href + '" target="_blank">Copy & Share This Private Room Link</a>';
+        uniqueToken.style.display = 'block';
+    }
+
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+var app = new Vue({
+    el: "#app",
+    data: {
+        testCondition: 'B',
+        newEntry: "",
+        todos: []
+    },
+    computed: {
+        unfinishedEntries: function () {
+            return this.todos.filter(function (entry) {
+                return !entry.isDone;
+            });
+        }
+    },
+    watch: {
+        todos :{
+            handler: function (newTodos) {
+                sessionStorage.setItem("my-todo-list", JSON.stringify(newTodos));
+            },
+            deep: true
+        }
+    },
+    methods: {
+        addEntry: function() {
+            if (this.newEntry) {
+                this.todos.push({value: this.newEntry, isDone: false});
+                this.newEntry = "";
+            }
+        },
+        removeEntry: function (index) {
+            this.todos.splice(index, 1);
+        },
+    },
+    beforeCreate: function () {
+        // console.log('before create');
+    },
+    created: function () {
+        // console.log('created');
+    },
+    beforeMount: function () {
+        // console.log('before mount');
+    },
+    mounted: function () {
+        const ssTodos = sessionStorage.getItem('my-todo-list');
+        this.todos = ssTodos ? JSON.parse(ssTodos) : [];
+    }
+});
+</script>
+
+
+<script>
+    var socket = io();
+    let vue = new Vue({
+        el: '#chat',
+
+        data: {
+            newMessage: null,
+            messages: [],
+            typing: false,
+            username: null,
+            ready: false,
+            info: [],
+            connections: 0,
+        },
+
+        created() {
+            window.onbeforeunload = () => {
+                socket.emit('leave', this.username);
+            }
+            
+            socket.on('chat-message', (data) => {
+                this.messages.push({
+                    message: data.message,
+                    type: 1,
+                    user: data.user,
+                });
+            });
+
+            socket.on('typing', (data) => {
+                this.typing = data;
+            });
+
+
+            socket.on('stopTyping', () => {
+                this.typing = false;
+            });
+
+            socket.on('joined', (data) => {
+                this.info.push({
+                    username: data,
+                    type: 'joined'
+                });
+
+                setTimeout(() => {
+                    this.info = [];
+                }, 5000);
+            });
+
+            socket.on('leave', (data) => {
+                this.info.push({
+                    username: data,
+                    type: 'left'
+                });
+
+                setTimeout(() => {
+                    this.info = [];
+                }, 5000);
+            });
+
+            socket.on('connections', (data) => {
+                this.connections = data;
+            });
+        },
+
+        watch: {
+            newMessage(value) {
+                value ? socket.emit('typing', this.username) : socket.emit('stopTyping');
+            }
+        },
+
+        methods: {
+            send() {
+                this.messages.push({
+                    message: this.newMessage,
+                    type: 0,
+                    user: 'Me',
+                });
+
+                socket.emit('chat-message', {
+                    message: this.newMessage,
+                    user: this.username
+                });
+                this.newMessage = null;
+            },
+
+            addUser() {
+                this.ready = true;
+                socket.emit('joined', this.username)
+            }
+        },
+
+    });
+</script>
+
+
+
+</html>
