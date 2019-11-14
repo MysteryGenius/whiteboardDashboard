@@ -61,16 +61,16 @@ video {
 }
 </style>
 
-<body class="bg-secondary p-5 bg-gray-100">
-    <h1 class="text-6xl">Whiteboard</h1>
+<body class="bg-secondary p-5 bg-gray-300" style="background-image: url('https://images.unsplash.com/photo-1566640241442-bd59e5f70d08?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1050&q=80'); background-size: 100%; ">
+    <h1 class="text-6xl" style="color: #760731;">Whiteboard</h1>
     <div class="container">
         <div class="flex w-3/4">
             <div class="flex-1">
-                <div class="max-w-sm rounded overflow-hidden shadow-lg text-gray-700 text-center bg-gray-100 my-5 ">
-                    <h2 class="text-2xl">Today's Content</h2>
+                <div class="max-w-sm rounded overflow-hidden shadow-lg text-gray-700 text-center bg-gray-100 my-5 py-5 px-3"style="background-color: #FFE8E5;">
+                    <h2 class="text-2xl mb-5">Today's Content</h2>
                 <div id="app">
-                    <input type="text" name="entry" v-model="newEntry" v-on:keyup.enter="addEntry" class="bg-white focus:outline-none focus:shadow-none border border-gray-300 rounded-lg py-2 px-4 block w-full appearance-none leading-normal">
-                    <p>
+                    <input type="text" name="entry" v-model="newEntry" v-on:keyup.enter="addEntry" class="bg-white focus:outline-none focus:shadow-none border border-gray-100 bg-gray-100 rounded-lg py-2 px-4 block w-full appearance-none leading-normal" >
+                    <p class="mt-5">
                         Unfinished: {{unfinishedEntries.length}} 
                     </p>
                     <div class="items">
@@ -84,15 +84,15 @@ video {
                 </div>
                 <div class="max-w-sm rounded overflow-hidden shadow-none text-gray-700 text-center bg-gray-100 ">
                     <form class="flex">
-                        <select class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" id="busstopcode">
+                        <select class="block appearance-none w-full bg-white border border-gray-100 bg-gray-100 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" id="busstopcode">
                             <option value="12101" selected>Ngee Ann</option>
                             <option value="12109">Opp Ngee Ann</option>
                             <option value="42091">Beauty World</option>
                         </select>
-                        <div id="button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded cursor-pointer">Check</div>
+                        <div id="button" class="bg-blue-500 hover:bg-blue-700 text-gray-700 font-bold py-2 px-6 rounded cursor-pointer" style="background-color: #FFE8E5;">Check</div>
                     </form> 
-                    <p id="result" class="text-xs"></p>
-                    <div id="viz"></div>
+                    <p id="result" class="text-xs bg-gray-100"></p>
+                    <div id="viz" class="bg-gray-100"></div>
                 </div>
             </div>
             
@@ -100,7 +100,7 @@ video {
                 <section class="experiment">
                     <section class="" style="text-align: center;">                    
                         <input type="text" id="room-name" placeholder="Enter " style="width: 80%; text-align: center; display: none;">
-                        <button id="share-screen" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded cursor-pointer mb-5">Share Your Screen</button>
+                        <button id="share-screen" class="text-gray-700 font-bold py-2 px-6 rounded cursor-pointer m-5" style="background-color: #FFE8E5;">Share Your Screen</button>
                     </section>
 
                     <!-- local/remote videos container -->
@@ -123,19 +123,19 @@ video {
                     <div class="form-group row">
                         <input type="text" class="bg-white focus:outline-none focus:shadow-none border border-gray-300 rounded-lg py-2 px-4 block w-full appearance-none leading-normal" v-model="username"
                             placeholder="Enter Name here...">
-                        <input type="submit" value="Join" class="bg-white focus:outline-none focus:shadow-none border border-gray-300 rounded-lg py-2 px-4 block w-full appearance-none leading-normal">
+                        <input type="submit" value="Join" class="bg-white focus:outline-none focus:shadow-none border border-gray-300 rounded-lg py-2 px-4 block w-full appearance-none leading-normal cursor-pointer" style="background-color: #FFE8E5;">
 
                     </div>
                 </form>
             </div>
-            <div class="max-w-sm rounded overflow-hidden shadow-lg bg-info " v-if="ready">
+            <div class="max-w-sm rounded overflow-hidden shadow-lg bg-gray-700 " v-if="ready">
                 <div class="text-3xl text-center m-5">
-                    <h4>Full Stack Development</h4>
+                    <h4 class="text-gray-100">Full Stack Development</h4>
                 </div>
                 <ul style="height: 64vh; overflow-y: scroll">
                     <small v-if="typing" class="text-white">{{typing}} is typing</small>
-                    <li :class="message.type === 1 ? 'text-left text-sm border border-gray-300 rounded-lg m-3 p-3' : 'text-right text-sm border border-gray-300 rounded-lg m-3 p-3'" v-for="message in messages">
-                        <p>{{message.message}}</p>
+                    <li :class="message.type === 1 ? 'text-left text-sm border border-gray-500 bg-gray-300 rounded-lg m-3 p-3' : 'text-right text-sm border border-gray-500 bg-gray-300  rounded-lg m-3 p-3'" v-for="message in messages">
+                        <p class="text-gray-900">{{message.message}}</p>
                         <small class="text-xs text-gray-500">{{message.user}}</small>
                     </li>
                 </ul>
@@ -154,7 +154,6 @@ video {
 
 </body>
 <script src="https://d3js.org/d3.v4.js"></script>
-
 <script>
     function create_graph() {
         var request = new XMLHttpRequest();
